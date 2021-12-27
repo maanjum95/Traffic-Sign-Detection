@@ -35,7 +35,7 @@ def get_yolo_output(yolo_net, yolo_output_layers, img):
 
     return yolo_net.forward(yolo_output_layers)
 
-def get_yolo_detections(yolo_net, yolo_output_layers, img, threshold=0.5):
+def get_yolo_detections(img, yolo_net, yolo_output_layers, threshold=0.5):
     yolo_output = get_yolo_output(yolo_net, yolo_output_layers, img)
     yolo_detections = []
     yolo_confidences = []
@@ -71,3 +71,32 @@ def get_classifier_classes():
     with open(CLASSIFIER_CLASSES, "r") as f:
         classifier_classes = [line.strip() for line in f.readlines()]
     return classifier_classes
+
+def run_algorithm_on_img(img, yolo_net, yolo_output_layers, classifier, classifier_classes, threshold=0.5, font=cv.FONT_HERSHEY_SIMPLEX, show_bbox=True, show_label=True):
+    prediction_class_idxs = []
+    img_height, img_width, _ = img.shape
+
+    detections, confidences = get_yolo_detections(img, yolo_net, yolo_output_layers, threshold=threshold)
+    detection_bboxes = [get_yolo_detection_bbox(detection, img_width, img_height) for detection in detections]
+    non_overlapping_indexes = cv.dnn.NMSBoxes(detection_bboxes, confidences, 0.5, 0.4)
+
+    for idx in non_overlapping_indexes:
+        x, y, w, h = detection_bboxes[idx]
+
+        if show_bbox:
+            cv.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+        img_crop = img[y: y+h, x: x+w]
+        if len(img_crop) > 0:
+            img_crop = cv.resize(img_crop, (CLASSIFIER_W, CLASSIFIER_H))
+            img_crop = img_crop.reshape(-1, CLASSIFIER_W, CLASSIFIER_H, 3)
+
+            prediction = np.argmax(classifier.predict(img_crop))
+            prediction_class_idxs.append(prediction)
+
+            if show_label:
+                label = str(classifier_classes[prediction])
+                cv.putText(img, label, (x, y), font, 0.5, (255, 0, 0), 2)
+    return img, prediction_class_idxs
+
+
