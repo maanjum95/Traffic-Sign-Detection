@@ -1,9 +1,10 @@
 import os
 import numpy as np
 import cv2 as cv
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]=""
 from tensorflow.keras.models import load_model
 
-os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 YOLO_WEIGHTS = "weights/yolov4-tiny_training_last.weights"
 YOLO_CFG = "cfg/yolov4-tiny_training.cfg"
@@ -82,12 +83,21 @@ def run_algorithm_on_img(img, yolo_net, yolo_output_layers, classifier, classifi
 
     for idx in non_overlapping_indexes:
         x, y, w, h = detection_bboxes[idx]
+        x_w = x + w
+        y_h = y + h
+
+        # limits check
+        x = 0 if x < 0 else x
+        y = 0 if y < 0 else y
+        x_w = (img_width - 1) if x_w >= img_width else x_w
+        y_h = (img_height - 1) if y_h >= img_height else y_h
 
         if show_bbox:
-            cv.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            cv.rectangle(img, (x, y), (x_w, y_h), (255, 0, 0), 2)
 
-        img_crop = img[y: y+h, x: x+w]
-        if len(img_crop) > 0:
+        if w > 0 and h > 0:
+            print(x, y, w, h, x_w, y_h, img_width, img_height)
+            img_crop = img[y: y_h, x: x_w]
             img_crop = cv.resize(img_crop, (CLASSIFIER_W, CLASSIFIER_H))
             img_crop = img_crop.reshape(-1, CLASSIFIER_W, CLASSIFIER_H, 3)
 

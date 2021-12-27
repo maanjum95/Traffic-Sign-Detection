@@ -1,5 +1,4 @@
 import time
-import numpy as np
 import cv2 as cv
 
 import model
@@ -15,7 +14,6 @@ def webcam_demo():
     # webcam
     webcam = cv.VideoCapture(0)
 
-    font = cv.FONT_HERSHEY_SIMPLEX
     start_time = time.time()
     frame_count = 0
 
@@ -32,9 +30,6 @@ def webcam_demo():
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
     cv.destroyAllWindows()
-        
-
-
 
 if __name__ == "__main__":
     webcam_demo()
