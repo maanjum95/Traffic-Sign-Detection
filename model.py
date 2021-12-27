@@ -1,10 +1,7 @@
 import os
 import numpy as np
 import cv2 as cv
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]=""
-from tensorflow.keras.models import load_model
-
+import tensorflow.keras.models 
 
 YOLO_WEIGHTS = "weights/yolov4-tiny_training_last.weights"
 YOLO_CFG = "cfg/yolov4-tiny_training.cfg"
@@ -65,7 +62,7 @@ def get_yolo_detection_bbox(detection, img_width, img_height):
 
 
 def load_classifier():
-    return load_model(CLASSIFIER)
+    return tensorflow.keras.models.load_model(CLASSIFIER)
 
 def get_classifier_classes():
     classifier_classes = []
