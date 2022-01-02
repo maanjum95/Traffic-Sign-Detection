@@ -1,4 +1,5 @@
-import os
+import threading
+import queue
 import numpy as np
 import cv2 as cv
 import tensorflow.keras.models 
@@ -70,15 +71,31 @@ def get_classifier_classes():
         classifier_classes = [line.strip() for line in f.readlines()]
     return classifier_classes
 
-def run_algorithm_on_img(img, yolo_net, yolo_output_layers, classifier, classifier_classes, threshold=0.5, font=cv.FONT_HERSHEY_SIMPLEX, show_bbox=True, show_label=True):
-    prediction_class_idxs = []
+def setup_model():
+    yolo_net = load_yolo_net()
+    yolo_classes = get_yolo_classes()
+    yolo_output_layers = get_yolo_output_layers(yolo_net)
+
+    classifier = load_classifier()
+    classifier_classes = get_classifier_classes()
+
+    return {
+        "yolo_net": yolo_net,
+        "yolo_classes": yolo_classes,
+        "yolo_output_layers": yolo_output_layers,
+        "classifier": classifier,
+        "classifier_classes": classifier_classes,
+    }
+
+def run_algorithm_on_img(img, model_dict, threshold=0.5, font=cv.FONT_HERSHEY_SIMPLEX, show_bbox=True, show_label=True):
+    predictions = []
     img_height, img_width, _ = img.shape
 
-    detections, confidences = get_yolo_detections(img, yolo_net, yolo_output_layers, threshold=threshold)
+    detections, confidences = get_yolo_detections(img, model_dict["yolo_net"], model_dict["yolo_output_layers"], threshold=threshold)
     detection_bboxes = [get_yolo_detection_bbox(detection, img_width, img_height) for detection in detections]
-    non_overlapping_indexes = cv.dnn.NMSBoxes(detection_bboxes, confidences, 0.5, 0.4)
+    non_overlapping_idxs = cv.dnn.NMSBoxes(detection_bboxes, confidences, 0.5, 0.4)
 
-    for idx in non_overlapping_indexes:
+    for idx in non_overlapping_idxs:
         x, y, w, h = detection_bboxes[idx]
         x_w = x + w
         y_h = y + h
@@ -93,17 +110,15 @@ def run_algorithm_on_img(img, yolo_net, yolo_output_layers, classifier, classifi
             cv.rectangle(img, (x, y), (x_w, y_h), (255, 0, 0), 2)
 
         if w > 0 and h > 0:
-            print(x, y, w, h, x_w, y_h, img_width, img_height)
             img_crop = img[y: y_h, x: x_w]
             img_crop = cv.resize(img_crop, (CLASSIFIER_W, CLASSIFIER_H))
             img_crop = img_crop.reshape(-1, CLASSIFIER_W, CLASSIFIER_H, 3)
 
-            prediction = np.argmax(classifier.predict(img_crop))
-            prediction_class_idxs.append(prediction)
+            prediction = np.argmax(model_dict["classifier"].predict(img_crop))
 
             if show_label:
-                label = str(classifier_classes[prediction])
+                label = str(model_dict["classifier_classes"][prediction])
                 cv.putText(img, label, (x, y), font, 0.5, (255, 0, 0), 2)
-    return img, prediction_class_idxs
 
-
+            predictions.append([x, y, x_w, y_h, prediction])
+    return img, predictions

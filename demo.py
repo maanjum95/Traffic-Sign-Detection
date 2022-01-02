@@ -4,12 +4,7 @@ import cv2 as cv
 import model
 
 def webcam_demo():
-    yolo_net = model.load_yolo_net()
-    yolo_classes = model.get_yolo_classes()
-    yolo_output_layers = model.get_yolo_output_layers(yolo_net)
-
-    classifier = model.load_classifier()
-    classifier_classes = model.get_classifier_classes()
+    model_dict = model.setup_model()
 
     # webcam
     webcam = cv.VideoCapture(0)
@@ -19,7 +14,7 @@ def webcam_demo():
 
     while True:
         _, img = webcam.read()
-        img, _ = model.run_algorithm_on_img(img, yolo_net, yolo_output_layers, classifier, classifier_classes)
+        img, _ = model.run_algorithm_on_img(img, model_dict)
         frame_count += 1
 
         elapsed_time = time.time() - start_time
