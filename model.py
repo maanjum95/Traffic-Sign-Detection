@@ -87,11 +87,19 @@ def setup_model():
         "classifier_classes": classifier_classes,
     }
 
-def run_algorithm_on_img(img, model_dict, threshold=0.5, font=cv.FONT_HERSHEY_SIMPLEX, show_bbox=True, show_label=True):
+def default_params():
+    return {
+        "threshold": 0.5,
+        "show_bbox": True,
+        "show_label": True,
+        "run_worker": True,
+    }
+
+def run_algorithm_on_img(img, model_dict, model_params, font=cv.FONT_HERSHEY_SIMPLEX):
     predictions = []
     img_height, img_width, _ = img.shape
 
-    detections, confidences = get_yolo_detections(img, model_dict["yolo_net"], model_dict["yolo_output_layers"], threshold=threshold)
+    detections, confidences = get_yolo_detections(img, model_dict["yolo_net"], model_dict["yolo_output_layers"], threshold=model_params["threshold"])
     detection_bboxes = [get_yolo_detection_bbox(detection, img_width, img_height) for detection in detections]
     non_overlapping_idxs = cv.dnn.NMSBoxes(detection_bboxes, confidences, 0.5, 0.4)
 
@@ -106,7 +114,7 @@ def run_algorithm_on_img(img, model_dict, threshold=0.5, font=cv.FONT_HERSHEY_SI
         x_w = (img_width - 1) if x_w >= img_width else x_w
         y_h = (img_height - 1) if y_h >= img_height else y_h
 
-        if show_bbox:
+        if model_params["show_bbox"]:
             cv.rectangle(img, (x, y), (x_w, y_h), (255, 0, 0), 2)
 
         if w > 0 and h > 0:
@@ -114,11 +122,31 @@ def run_algorithm_on_img(img, model_dict, threshold=0.5, font=cv.FONT_HERSHEY_SI
             img_crop = cv.resize(img_crop, (CLASSIFIER_W, CLASSIFIER_H))
             img_crop = img_crop.reshape(-1, CLASSIFIER_W, CLASSIFIER_H, 3)
 
-            prediction = np.argmax(model_dict["classifier"].predict(img_crop))
+            prediction = model_dict["classifier"].predict(img_crop)[0]
+            prediction_idx = np.argmax(prediction)
+            prediction_acc = prediction[prediction_idx]
 
-            if show_label:
-                label = str(model_dict["classifier_classes"][prediction])
+            if model_params["show_label"]:
+                label = f"{model_dict['classifier_classes'][prediction_idx]}: {round(prediction_acc * 100, 1)}%"
                 cv.putText(img, label, (x, y), font, 0.5, (255, 0, 0), 2)
 
-            predictions.append([x, y, x_w, y_h, prediction])
+            predictions.append([x, y, x_w, y_h, prediction_idx, prediction_acc])
     return img, predictions
+
+def algorithm_worker(inp_queue, out_queue, model_dict, model_params):
+    while model_params["run_worker"]:
+        try:
+            inp_img = inp_queue.get(timeout=5)
+            print(inp_img)
+        except queue.Empty:
+            continue
+
+        out_img, predictions = run_algorithm_on_img(inp_img, model_dict, model_params)
+        out_queue.put({"img": out_img, "predictions": predictions})
+
+def setup_algorithm_thread(model_params, model_dict=setup_model()):
+    inp_queue = queue.Queue()
+    out_queue = queue.Queue()
+    thread =  threading.Thread(target=run_algorithm_on_img, args=(inp_queue, out_queue, model_dict, model_params))
+
+    return inp_queue, out_queue, thread
