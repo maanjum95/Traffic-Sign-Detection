@@ -4,8 +4,8 @@ import numpy as np
 import cv2 as cv
 from tflite_runtime.interpreter import Interpreter
 
-YOLO_WEIGHTS = "weights/yolov3_training_last.weights"
-YOLO_CFG = "cfg/yolov3_training.cfg"
+YOLO_WEIGHTS = "weights/yolov4-tiny_training_last.weights"
+YOLO_CFG = "cfg/yolov4-tiny_training.cfg"
 YOLO_CLASSES = "cfg/signs.names.txt"
 
 CLASSIFIER = "weights/traffic.tflite"
