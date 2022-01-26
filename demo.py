@@ -124,5 +124,5 @@ def video_demo(video_path):
 
 
 if __name__ == "__main__":
-    video_demo("input/munich.mp4")
-    #webcam_demo()
+    #video_demo("input/munich.mp4")
+    webcam_demo()
