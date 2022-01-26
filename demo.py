@@ -1,10 +1,8 @@
-import os
+import platform
 import time
-import queue
-import threading
 import cv2 as cv
 
-if os.uname()[1] == "raspberrypi":
+if platform.uname()[1] == "raspberrypi":
     import model_pi as model
     from re_terminal import setup_btns
 else:
