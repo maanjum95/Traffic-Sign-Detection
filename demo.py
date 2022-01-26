@@ -10,9 +10,19 @@ else:
     import model
 import signs
 
+
+def setup_cv_window():
+    window_name = "traffig_sign_detector"
+    cv.namedWindow(window_name, cv.WND_PROP_FULLSCREEN)
+    cv.setWindowProperty(window_name, cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
+
+    return window_name
+
 def webcam_demo():
+    window = setup_cv_window()
     model_dict = model.setup_model()
     model_params = model.default_params()
+    sign_imgs = signs.load_imgs()
 
     # webcam
     webcam = cv.VideoCapture(0)
@@ -26,7 +36,7 @@ def webcam_demo():
         frame_count += 1
 
         # run algorithm on image
-        img, _ = model.run_algorithm_on_img(img, model_dict, model_params)
+        img, predictions = model.run_algorithm_on_img(img, model_dict, model_params)
 
         # add signs imags
         signs.add_signs_to_img(predictions)
@@ -36,13 +46,14 @@ def webcam_demo():
         fps = frame_count / elapsed_time
         print("Fps: ", str(round(fps, 2)))
 
-        cv.imshow("Image", img)
+        cv.imshow(window, img)
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
     webcam.release()
     cv.destroyAllWindows()
 
 def video_demo(video_path):
+    window = setup_cv_window()
     model_dict = model.setup_model()
     model_params = model.default_params()
     sign_imgs = signs.load_imgs() 
@@ -72,7 +83,7 @@ def video_demo(video_path):
         fps = frame_count / elapsed_time
         print(f"FPS: {round(fps, 2)}")
 
-        cv.imshow("Image", img)
+        cv.imshow(window, img)
         if cv.waitKey(1) & 0xFF == ord('q'):
             video.release()
             break
@@ -81,4 +92,5 @@ def video_demo(video_path):
 
 
 if __name__ == "__main__":
-    video_demo("input/munich.mp4")
+    #video_demo("input/munich.mp4")
+    webcam_demo()
