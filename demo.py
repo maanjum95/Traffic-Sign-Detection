@@ -1,9 +1,13 @@
+import os
 import time
 import queue
 import threading
 import cv2 as cv
 
-import model
+if os.uname()[1] == "raspberrypi":
+    import model_pi as model
+else:
+    import model
 import signs
 
 def webcam_demo():
@@ -18,8 +22,15 @@ def webcam_demo():
 
     while True:
         _, img = webcam.read()
-        img, _ = model.run_algorithm_on_img(img, model_dict, model_params)
+        img_h, img_w, _ = img.shape
         frame_count += 1
+
+        # run algorithm on image
+        img, _ = model.run_algorithm_on_img(img, model_dict, model_params)
+
+        # add signs imags
+        signs.add_signs_to_img(predictions)
+        signs.show_signs(img, sign_imgs, img_w, img_h)
 
         elapsed_time = time.time() - start_time
         fps = frame_count / elapsed_time
@@ -28,6 +39,7 @@ def webcam_demo():
         cv.imshow("Image", img)
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
+    webcam.release()
     cv.destroyAllWindows()
 
 def video_demo(video_path):
@@ -46,14 +58,15 @@ def video_demo(video_path):
         img_h, img_w, _ = img.shape
         frame_count += 1
 
+        # run algorithm on image
         img, predictions = model.run_algorithm_on_img(img, model_dict, model_params)
 
         # add signs imags
         signs.add_signs_to_img(predictions)
         signs.show_signs(img, sign_imgs, img_w, img_h)
 
-        if len(predictions) > 0:
-            cv.imwrite(f"output/{frame_count}.jpg", img)
+        #if len(predictions) > 0:
+        #    cv.imwrite(f"output/{frame_count}.jpg", img)
 
         elapsed_time = time.time() - exe_start
         fps = frame_count / elapsed_time
