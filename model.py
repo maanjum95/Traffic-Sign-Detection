@@ -89,17 +89,18 @@ def setup_model():
 
 def default_params():
     return {
-        "threshold": 0.5,
+        "yolo_threshold": 0.5,
+        "sign_threshold": 0.6,
         "show_bbox": True,
         "show_label": True,
-        "run_worker": True,
+        "show_signs": True,
     }
 
 def run_algorithm_on_img(img, model_dict, model_params, font=cv.FONT_HERSHEY_SIMPLEX):
     predictions = []
     img_height, img_width, _ = img.shape
 
-    detections, confidences = get_yolo_detections(img, model_dict["yolo_net"], model_dict["yolo_output_layers"], threshold=model_params["threshold"])
+    detections, confidences = get_yolo_detections(img, model_dict["yolo_net"], model_dict["yolo_output_layers"], threshold=model_params["yolo_threshold"])
     detection_bboxes = [get_yolo_detection_bbox(detection, img_width, img_height) for detection in detections]
     non_overlapping_idxs = cv.dnn.NMSBoxes(detection_bboxes, confidences, 0.5, 0.4)
 
@@ -126,27 +127,9 @@ def run_algorithm_on_img(img, model_dict, model_params, font=cv.FONT_HERSHEY_SIM
             prediction_idx = np.argmax(prediction)
             prediction_acc = prediction[prediction_idx]
 
-            if model_params["show_label"]:
+            if model_params["show_bbox"] and model_params["show_label"]:
                 label = f"{model_dict['classifier_classes'][prediction_idx]}: {round(prediction_acc * 100, 1)}%"
                 cv.putText(img, label, (x, y), font, 0.5, (255, 0, 0), 2)
 
             predictions.append([x, y, x_w, y_h, prediction_idx, prediction_acc])
     return img, predictions
-
-def algorithm_worker(inp_queue, out_queue, model_dict, model_params):
-    while model_params["run_worker"]:
-        try:
-            inp_img = inp_queue.get(timeout=5)
-            print(inp_img)
-        except queue.Empty:
-            continue
-
-        out_img, predictions = run_algorithm_on_img(inp_img, model_dict, model_params)
-        out_queue.put({"img": out_img, "predictions": predictions})
-
-def setup_algorithm_thread(model_params, model_dict=setup_model()):
-    inp_queue = queue.Queue()
-    out_queue = queue.Queue()
-    thread =  threading.Thread(target=run_algorithm_on_img, args=(inp_queue, out_queue, model_dict, model_params))
-
-    return inp_queue, out_queue, thread
