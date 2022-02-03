@@ -30,11 +30,12 @@ def show_signs(img, sign_imgs, img_w, img_h):
     global signs_to_show 
 
     signs_added = 0
+    max_signs_col = 3
 
     for sign in signs_to_show:
         if signs_to_show[sign] > 0:
-            x = img_w - (signs_added // 5 + 1) * (SIGN_IMG_W + SIGN_IMG_PAD)
-            y = img_h - (signs_added % 5 + 1) * (SIGN_IMG_H + SIGN_IMG_PAD)
+            x = img_w - (signs_added // max_signs_col + 1) * (SIGN_IMG_W + SIGN_IMG_PAD)
+            y = img_h - (signs_added % max_signs_col + 1) * (SIGN_IMG_H + SIGN_IMG_PAD)
             sign_img = sign_imgs.get(sign)
             if sign_img is not None:
                 add_sign_img_to_img(img, sign_img, x, y)
